@@ -7,6 +7,17 @@ const app = express();
 const client = new WebTorrent({ maxConns: 50, uploadLimit: 0 });
 const torrentCache = new Map();
 
+// ADD CORS HEADERS - THIS FIXES STREMIO
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 const manifest = {
     id: "org.ghostream.render",
     name: "🔥 GHOSTREAM ULTIMATE",
@@ -44,7 +55,7 @@ builder.defineStreamHandler(async (args) => {
             return {
                 name: isYTS ? "💎 GHOSTREAM [YTS]" : "💎 GHOSTREAM [TPB]",
                 title: s.title,
-                url: `https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost'}/stream/${infoHash}/video.mp4`,
+                url: `https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'ghostream-production.up.railway.app'}/stream/${infoHash}/video.mp4`,
                 behaviorHints: { notWebReady: false, proxyHeaders: true }
             };
         });
