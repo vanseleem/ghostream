@@ -3,11 +3,22 @@ import express from "express";
 import fetch from "node-fetch";
 
 const app = express();
+
+// Force CORS headers on every response
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
+
+// NEW addon ID – forces Stremio to treat it as a fresh addon
 const manifest = {
-    id: "org.ghostream.railway.final",
-    name: "🚀 GHOSTREAM FINAL",
+    id: "org.ghostream.railway.installable.v2",
+    name: "🚀 GHOSTREAM (RAILWAY)",
     description: "Magnet links – Stremio torrent engine",
-    version: "27.0.0",
+    version: "30.0.0",
     resources: ["stream"],
     types: ["movie", "series"],
     idPrefixes: ["tt"],
