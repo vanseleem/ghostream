@@ -10,7 +10,7 @@ const torrentCache = new Map();
 const manifest = {
     id: "org.ghostream.render",
     name: "🔥 GHOSTREAM ULTIMATE",
-    description: "Optimized for Render.com - Instant Streaming",
+    description: "Optimized for Railway - Instant Streaming",
     version: "9.0.0",
     resources: ["stream"],
     types: ["movie", "series"],
@@ -44,7 +44,7 @@ builder.defineStreamHandler(async (args) => {
             return {
                 name: isYTS ? "💎 GHOSTREAM [YTS]" : "💎 GHOSTREAM [TPB]",
                 title: s.title,
-                url: `https://${process.env.RENDER_EXTERNAL_URL || 'localhost'}/stream/${infoHash}/video.mp4`,
+                url: `https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost'}/stream/${infoHash}/video.mp4`,
                 behaviorHints: { notWebReady: false, proxyHeaders: true }
             };
         });
@@ -115,5 +115,5 @@ app.get("/stream/:type/:id.json", async (req, res) => {
 app.get("/", (req, res) => res.json(addonInterface.manifest));
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Running on port ${PORT}`));
