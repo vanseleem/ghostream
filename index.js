@@ -69,8 +69,8 @@ app.get('/manifest.json', (req, res) => {
   res.json({
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
-    description: '720p/1080p only – YTS, 1337x, EZTV, Rutor',
-    version: '3.7.0',
+    description: 'Exclusive By Van',
+    version: '5.0',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
