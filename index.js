@@ -6,14 +6,17 @@ const app = express();
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
 });
 
 const manifest = {
-    id: "org.ghostream.railway.final.v5",
-    name: "🚀 GHOSTREAM (FIXED)",
-    description: "Direct torrent streams via Stremio engine",
-    version: "50.0.0",
+    id: "org.ghostream.railway.final.v6",
+    name: "🚀 GHOSTREAM (FINAL)",
+    description: "Clean magnet streams for Stremio",
+    version: "60.0.0",
     resources: ["stream"],
     types: ["movie", "series"],
     idPrefixes: ["tt"],
@@ -30,7 +33,9 @@ builder.defineStreamHandler(async (args) => {
 
         const filtered = streams.filter(s => {
             const t = (s.title || "").toLowerCase();
-            return !t.includes("2160p") &&
+            return s.infoHash &&
+                s.infoHash.length === 40 &&
+                !t.includes("2160p") &&
                 (t.includes("1080p") || t.includes("720p"));
         });
 
@@ -44,8 +49,8 @@ builder.defineStreamHandler(async (args) => {
         const proxied = sorted.slice(0, 10).map(s => ({
             name: "🚀 GHOSTREAM",
             title: s.title,
-            infoHash: s.infoHash,
-            fileIdx: 0
+            url: `magnet:?xt=urn:btih:${s.infoHash}`,
+            behaviorHints: { notWebReady: true }
         }));
 
         return { streams: proxied };
@@ -65,6 +70,7 @@ app.get("/stream/:type/:id.json", async (req, res) => {
 });
 
 app.get("/", (req, res) => res.json(addonInterface.manifest));
+app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Running on port ${PORT}`));
