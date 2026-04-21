@@ -1,13 +1,10 @@
-{
-  "name": "ghostream-platinum",
-  "version": "1.3.0",
-  "description": "High-speed 720p/1080p Indexer",
-  "main": "index.js",
-  "dependencies": {
-    "stremio-addon-sdk": "^1.6.0",
-    "axios": "^1.6.0"
-  },
-  "scripts": {
-    "start": "node index.js"
-  }
-}
+module.exports = {
+    id: "org.ghostream.platinum",
+    version: "1.5.0",
+    name: "Ghostream Platinum 🚀",
+    description: "High-speed 720p/1080p Indexer (YTS, EZTV, 1337x)",
+    resources: ["stream"],
+    types: ["movie", "series"],
+    idPrefixes: ["tt"],
+    catalogs: []
+};
