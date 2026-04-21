@@ -1,8 +1,10 @@
-{
-  "name": "ghostream",
-  "version": "3.7.0",
-  "main": "index.js",
-  "scripts": { "start": "node index.js" },
-  "dependencies": { "express": "^4.18.2", "node-fetch": "^2.6.7" },
-  "engines": { "node": ">=16" }
-}
+module.exports = {
+    id: "org.ghostream.platinum",
+    version: "1.1.0",
+    name: "Ghostream Platinum",
+    description: "Exclusive 720p/1080p high-seeder index for YTS, 1337x, and Rutracker.",
+    resources: ["stream"],
+    types: ["movie", "series"],
+    idPrefixes: ["tt"],
+    catalogs: []
+};
