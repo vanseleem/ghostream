@@ -17,7 +17,7 @@ const UPSTREAM_URLS = [
   'https://torrentio.stremio.my.id'
 ];
 
-const MIN_SEEDERS = 3;
+const MIN_SEEDERS = 1; // Allow rare content
 const ALLOWED_QUALITIES = ['480p', '576p', '720p', '1080p'];
 
 const SOURCE_CONFIG = [
@@ -55,7 +55,7 @@ function detectSource(title = '') {
   for (const src of SOURCE_CONFIG) {
     if (lower.includes(src.name)) return src.name;
   }
-  return null;
+  return null; // Reject unknown sources
 }
 
 function getSourceOrder(sourceName) {
@@ -69,7 +69,7 @@ function filterStream(stream) {
   const quality = getQuality(title);
   if (!ALLOWED_QUALITIES.includes(quality)) return false;
   if (getSeeders(stream) < MIN_SEEDERS) return false;
-  if (!detectSource(title)) return false;
+  if (!detectSource(title)) return false; // Only allowed sources
   return true;
 }
 
@@ -132,7 +132,7 @@ app.get('/manifest.json', (req, res) => {
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
     description: 'Made With 🧡 By VAN',
-    version: '5.1.2',
+    version: '5.1.4',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
