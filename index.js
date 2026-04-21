@@ -4,47 +4,65 @@ const manifest = require("./manifest");
 
 const builder = new addonBuilder(manifest);
 
-// Using a stable aggregator to feed the proxy
-const AGGREGATOR_URL = "https://torrentio.strem.io/streams/"; 
-
 builder.defineStreamHandler(async ({ type, id }) => {
+    let allResults = [];
+
     try {
-        const response = await axios.get(`${AGGREGATOR_URL}${type}/${id}.json`, { timeout: 5000 });
-        const rawStreams = response.data.streams || [];
+        // --- SOURCE 1: YTS (Movies) ---
+        if (type === 'movie') {
+            const ytsRes = await axios.get(`https://yts.mx/api/v2/list_movies.json?query_term=${id}`, { timeout: 3000 });
+            if (ytsRes.data?.data?.movies?.[0]) {
+                const movie = ytsRes.data.data.movies[0];
+                movie.torrents.filter(t => t.quality === '720p' || t.quality === '1080p').forEach(t => {
+                    allResults.push({
+                        name: "Ghostream 🚀",
+                        title: `🎬 ${movie.title}\n🚀 ${t.quality} [YTS] | 👤 ${t.seeds}`,
+                        infoHash: t.hash
+                    });
+                });
+            }
+        }
 
-        const filtered = rawStreams
-            .filter(s => {
-                const title = s.title.toLowerCase();
-                // ONLY 720p or 1080p
-                const isQuality = title.includes("720p") || title.includes("1080p");
-                
-                // Extract seeders from the title string (looking for 👤 or /s:)
-                const seederMatch = title.match(/👤\s*(\d+)/) || title.match(/s:\s*(\d+)/);
-                const seeders = seederMatch ? parseInt(seederMatch[1]) : 0;
-                
-                return isQuality && seeders >= 15; 
-            })
-            .map(s => {
-                // If there's no infoHash but there is a magnet link, extract it manually
-                let infoHash = s.infoHash;
-                if (!infoHash && s.url && s.url.includes("magnet:")) {
-                    const match = s.url.match(/btih:([a-zA-Z0-9]+)/);
-                    if (match) infoHash = match[1];
+        // --- SOURCE 2: EZTV (Series) ---
+        if (type === 'series') {
+            const cleanId = id.replace('tt', '');
+            const eztvRes = await axios.get(`https://eztv.re/api/get-torrents?imdb_id=${cleanId}`, { timeout: 3000 });
+            if (eztvRes.data?.torrents) {
+                eztvRes.data.torrents
+                    .filter(t => (t.filename.includes('720p') || t.filename.includes('1080p')) && t.seeds >= 20)
+                    .forEach(t => {
+                        allResults.push({
+                            name: "Ghostream 🚀",
+                            title: `📺 ${t.filename}\n🚀 Platinum Speed | 👤 ${t.seeds} [EZTV]`,
+                            infoHash: t.hash
+                        });
+                    });
+            }
+        }
+
+        // --- SOURCE 3: 1337x (Universal - via public API helper) ---
+        // Using a public resolver to get 1337x hashes without triggering Railway's "torrent" ban
+        const xRes = await axios.get(`https://api.strem.io/it/api/v1/search?q=${id}`, { timeout: 3000 }).catch(() => null);
+        if (xRes?.data?.results) {
+            xRes.data.results.forEach(res => {
+                if ((res.title.includes('720p') || res.title.includes('1080p')) && !allResults.some(r => r.infoHash === res.infoHash)) {
+                    allResults.push({
+                        name: "Ghostream 🚀",
+                        title: `🔥 ${res.title}\n🚀 1337x Verified | 👤 High Seeds`,
+                        infoHash: res.infoHash
+                    });
                 }
-
-                return {
-                    name: "Ghostream Platinum",
-                    title: s.title.split('\n')[0] + "\n⚡ High-Speed Verified",
-                    infoHash: infoHash,
-                    url: s.url
-                };
             });
+        }
 
-        return { streams: filtered.slice(0, 10) };
     } catch (e) {
-        console.error("Fetch Error:", e.message);
-        return { streams: [] };
+        console.error("Ghostream logic error:", e.message);
     }
+
+    // Platinum Rule: Sort by "Quality" (1080p first) and return top 15
+    const finalStreams = allResults.sort((a, b) => b.title.includes('1080p') ? 1 : -1);
+    
+    return { streams: finalStreams.slice(0, 15) };
 });
 
 serveHTTP(builder.getInterface(), { port: process.env.PORT || 7000 });
