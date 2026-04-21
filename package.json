@@ -1,8 +1,10 @@
 {
   "name": "ghostream-final",
-  "version": "27.0.0",
+  "version": "40.0.0",
   "type": "module",
-  "scripts": { "start": "node index.js" },
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "stremio-addon-sdk": "^1.6.10",
