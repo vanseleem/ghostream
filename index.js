@@ -14,13 +14,11 @@ app.use((req, res, next) => {
 
 const UPSTREAM_URLS = [
   'https://torrentio.strem.fun',
-  'https://torrentio.stremio.my.id',
-  'https://stremio-rutor-proxy.onrender.com'
+  'https://torrentio.stremio.my.id'
 ];
 
-const MIN_SEEDERS = 5;
+const MIN_SEEDERS = 3;
 const ALLOWED_QUALITIES = ['720p', '1080p'];
-const REQUIRED_SOURCES = ['yts', '1337x', 'eztv', 'rutor', 'thepiratebay', 'tpb'];
 
 const SOURCE_PRIORITY = [
   { source: 'yts', quality: '1080p' },
@@ -55,16 +53,18 @@ function detectSource(title = '') {
   if (lower.includes('eztv')) return 'eztv';
   if (lower.includes('rutor')) return 'rutor';
   if (lower.includes('thepiratebay') || lower.includes('tpb')) return 'thepiratebay';
-  return null;
+  return 'other';
 }
 
 function getPriorityScore(stream) {
   const title = stream.title || '';
   const source = detectSource(title);
   const quality = getQuality(title);
-  if (!source || !quality) return -1;
-  const index = SOURCE_PRIORITY.findIndex(p => p.source === source && p.quality === quality);
-  return index >= 0 ? index : 999;
+  if (!quality) return 999;
+  const index = SOURCE_PRIORITY.findIndex(p => 
+    p.source === source && p.quality === quality
+  );
+  return index >= 0 ? index : 500;
 }
 
 function filterStream(stream) {
@@ -73,8 +73,6 @@ function filterStream(stream) {
   const quality = getQuality(title);
   if (!ALLOWED_QUALITIES.includes(quality)) return false;
   if (getSeeders(stream) < MIN_SEEDERS) return false;
-  const source = detectSource(title);
-  if (!source) return false;
   return true;
 }
 
@@ -94,48 +92,30 @@ async function fetchUpstream(type, id) {
   return [];
 }
 
-function prioritizeAndDeduplicate(streams) {
+function sortStreams(streams) {
   const filtered = streams.filter(filterStream);
   
-  // Group by source+quality
-  const groups = {};
-  filtered.forEach(stream => {
-    const source = detectSource(stream.title);
-    const quality = getQuality(stream.title);
-    const key = `${source}-${quality}`;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(stream);
-  });
-  
-  // Within each group, keep only the highest seeder(s)
-  const bestPerGroup = [];
-  for (const key in groups) {
-    const groupStreams = groups[key];
-    groupStreams.sort((a, b) => getSeeders(b) - getSeeders(a));
-    const topSeeders = groupStreams[0] ? getSeeders(groupStreams[0]) : 0;
-    // Keep all streams that have the same maximum seeders (or just the top one)
-    const topStreams = groupStreams.filter(s => getSeeders(s) === topSeeders);
-    bestPerGroup.push(...topStreams);
-  }
-  
-  // Sort by defined priority order
-  bestPerGroup.sort((a, b) => {
+  filtered.sort((a, b) => {
     const scoreA = getPriorityScore(a);
     const scoreB = getPriorityScore(b);
     if (scoreA !== scoreB) return scoreA - scoreB;
-    // Same priority: higher seeders first
-    return getSeeders(b) - getSeeders(a);
+    
+    const seedsA = getSeeders(a);
+    const seedsB = getSeeders(b);
+    if (seedsA !== seedsB) return seedsB - seedsA;
+    
+    return 0;
   });
   
-  return bestPerGroup;
+  return filtered;
 }
 
 app.get('/manifest.json', (req, res) => {
   res.json({
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
-    description: 'YTS→TPB→1337x→Rutor (1080p→720p) • Highest seeds',
-    version: '3.8.0',
+    description: 'YTS→TPB→1337x→Rutor • 720p/1080p • ≥3 seeds',
+    version: '3.8.1',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
@@ -147,8 +127,8 @@ app.get('/stream/:type/:id.json', async (req, res) => {
   const { type, id } = req.params;
   try {
     const streams = await fetchUpstream(type, id);
-    const result = prioritizeAndDeduplicate(streams);
-    res.json({ streams: result });
+    const sorted = sortStreams(streams);
+    res.json({ streams: sorted });
   } catch (e) {
     res.json({ streams: [] });
   }
