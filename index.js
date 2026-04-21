@@ -132,7 +132,7 @@ app.get('/manifest.json', (req, res) => {
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
     description: 'Made With 🧡 By VAN',
-    version: '5.1.4',
+    version: '5.1.0',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
