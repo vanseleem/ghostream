@@ -4,6 +4,17 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 7000;
 
+// ========== CORS MIDDLEWARE (REQUIRED FOR STREMIO) ==========
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // ========== CONFIGURATION ==========
 const UPSTREAM_URL = 'https://torrentio.strem.fun';   // Public Torrentio instance
 const MIN_SEEDERS = 10;
@@ -68,7 +79,7 @@ app.get('/manifest.json', (req, res) => {
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
     description: 'High-speed 720p/1080p Filter (YTS, 1337x, TPB)',
-    version: '3.5.1',  // Bump version to force Stremio refresh
+    version: '3.5.2',  // Bump version to force Stremio refresh
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
@@ -123,6 +134,16 @@ app.get('/debug/:type/:id.json', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// ========== STATUS ENDPOINT ==========
+app.get('/status', (req, res) => {
+  res.json({
+    status: 'online',
+    upstream: UPSTREAM_URL,
+    minSeeders: MIN_SEEDERS,
+    allowedQualities: ALLOWED_QUALITIES
+  });
 });
 
 app.get('/', (req, res) => res.send('Ghostream is running. Use /manifest.json to install.'));
