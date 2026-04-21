@@ -20,12 +20,12 @@ const UPSTREAM_URLS = [
 
 const MIN_SEEDERS = 5;
 const ALLOWED_QUALITIES = ['720p', '1080p'];
-const REQUIRED_SOURCES = ['yts', '1337x', 'eztv', 'rutor'];
+const REQUIRED_SOURCES = ['yts', 'thepiratebay', 'tpb', 'torrentgalaxy', '1337x', 'eztv', 'rutor'];
 
 function getQuality(title = '') {
   const lower = title.toLowerCase();
-  if (lower.includes('1080p')) return '1080p';
   if (lower.includes('720p')) return '720p';
+  if (lower.includes('1080p')) return '1080p';
   return null;
 }
 
