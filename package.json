@@ -1,7 +1,7 @@
 {
   "name": "ghostream-platinum",
-  "version": "1.6.0",
-  "description": "High-speed Indexer",
+  "version": "1.7.0",
+  "description": "Ghostream Platinum Indexer",
   "main": "index.js",
   "dependencies": {
     "stremio-addon-sdk": "^1.6.0",
