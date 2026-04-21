@@ -1,6 +1,6 @@
 {
-  "name": "ghostream",
-  "version": "1.0.0",
+  "name": "ghostream-yts-1337x",
+  "version": "33.0.0",
   "type": "module",
   "scripts": {
     "start": "node index.js"
