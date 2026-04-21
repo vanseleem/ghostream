@@ -1,11 +1,11 @@
 {
   "name": "ghostream-platinum",
-  "version": "1.7.0",
-  "description": "Ghostream Platinum Indexer",
-  "main": "index.js",
+  "version": "3.5.0",
+  "type": "module",
   "dependencies": {
-    "stremio-addon-sdk": "^1.6.0",
-    "axios": "^1.6.0"
+    "express": "^4.18.2",
+    "stremio-addon-sdk": "^1.6.10",
+    "node-fetch": "^3.3.1"
   },
   "scripts": {
     "start": "node index.js"
