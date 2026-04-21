@@ -1,6 +1,6 @@
 {
   "name": "ghostream",
-  "version": "3.5.1",
+  "version": "3.5.2",
   "description": "Stremio addon that filters torrents for 720p/1080p with high seeders",
   "main": "index.js",
   "scripts": {
