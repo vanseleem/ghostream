@@ -14,10 +14,13 @@ app.use((req, res, next) => {
 
 const UPSTREAM_URLS = [
   'https://torrentio.strem.fun',
-  'https://torrentio.stremio.my.id'
+  'https://torrentio.stremio.my.id',
+  'https://stremio-rutor-proxy.onrender.com'
 ];
+
 const MIN_SEEDERS = 5;
 const ALLOWED_QUALITIES = ['720p', '1080p'];
+const REQUIRED_SOURCES = ['yts', '1337x', 'eztv', 'rutor'];
 
 function getQuality(title = '') {
   const lower = title.toLowerCase();
@@ -27,18 +30,22 @@ function getQuality(title = '') {
 }
 
 function getSeeders(stream) {
-  if (stream.behaviorHints?.seeders && stream.behaviorHints.seeders > 0) return stream.behaviorHints.seeders;
+  if (stream.behaviorHints?.seeders) return stream.behaviorHints.seeders;
   const match = stream.title?.match(/👤\s*(\d+)/);
   return match ? parseInt(match[1], 10) : 0;
+}
+
+function hasRequiredSource(title = '') {
+  const lower = title.toLowerCase();
+  return REQUIRED_SOURCES.some(src => lower.includes(src));
 }
 
 function filterStream(stream) {
   const title = stream.title || '';
   if (!stream.url && !stream.infoHash) return false;
-  const quality = getQuality(title);
-  if (!ALLOWED_QUALITIES.includes(quality)) return false;
-  const seeders = getSeeders(stream);
-  if (seeders < MIN_SEEDERS) return false;
+  if (!ALLOWED_QUALITIES.includes(getQuality(title))) return false;
+  if (getSeeders(stream) < MIN_SEEDERS) return false;
+  if (!hasRequiredSource(title)) return false;
   return true;
 }
 
@@ -53,9 +60,7 @@ async function fetchUpstream(type, id) {
         const data = await res.json();
         if (data.streams?.length) return data.streams;
       }
-    } catch (e) {
-      console.error(`Upstream ${baseUrl} failed:`, e.message);
-    }
+    } catch (e) {}
   }
   return [];
 }
@@ -63,9 +68,9 @@ async function fetchUpstream(type, id) {
 app.get('/manifest.json', (req, res) => {
   res.json({
     id: 'org.ghostream.platinum',
-    name: 'Ghostream Platinum',
-    description: '720p/1080p only, min 5 seeds',
-    version: '3.6.0',
+    name: 'Ghostream Platinum 🚀',
+    description: '720p/1080p only – YTS, 1337x, EZTV, Rutor',
+    version: '3.7.0',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
@@ -94,4 +99,4 @@ app.get('/debug/:type/:id.json', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Ghostream on ${PORT}`));
+app.listen(PORT, () => console.log(`Ghostream 🚀 on ${PORT}`));
