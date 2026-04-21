@@ -1,12 +1,11 @@
 {
   "name": "ghostream-platinum",
-  "version": "1.2.0",
-  "description": "Ghostream Platinum: High-speed 720p/1080p Indexer",
+  "version": "1.3.0",
+  "description": "High-speed 720p/1080p Indexer",
   "main": "index.js",
   "dependencies": {
     "stremio-addon-sdk": "^1.6.0",
-    "axios": "^1.6.0",
-    "magnet-uri": "^11.0.1"
+    "axios": "^1.6.0"
   },
   "scripts": {
     "start": "node index.js"
