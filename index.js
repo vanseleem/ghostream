@@ -40,7 +40,7 @@ function getSourceRank(title = '') {
   for (let i = 0; i < SOURCE_ORDER.length; i++) {
     if (lower.includes(SOURCE_ORDER[i])) return i;
   }
-  return SOURCE_ORDER.length; // others go last
+  return SOURCE_ORDER.length;
 }
 
 function filterStream(stream) {
@@ -78,8 +78,8 @@ function sortStreams(streams) {
       
       const qualityA = getQuality(a.title);
       const qualityB = getQuality(b.title);
-      if (qualityA === '1080p' && qualityB === '720p') return -1;
-      if (qualityA === '720p' && qualityB === '1080p') return 1;
+      if (qualityA === '720p' && qualityB === '1080p') return -1;
+      if (qualityA === '1080p' && qualityB === '720p') return 1;
       
       return getSeeders(b) - getSeeders(a);
     });
@@ -89,8 +89,8 @@ app.get('/manifest.json', (req, res) => {
   res.json({
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
-    description: 'YTS→TPB→1337x→EZTV→Rutor • 720p/1080p • ≥3 seeds',
-    version: '3.9.0',
+    description: 'Exclusive by Van',
+    version: '5.0.0',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
