@@ -13,10 +13,10 @@ app.use((req, res, next) => {
 });
 
 const manifest = {
-    id: "org.ghostream.railway.final.v6",
-    name: "🚀 GHOSTREAM (FINAL)",
-    description: "Clean magnet streams for Stremio",
-    version: "60.0.0",
+    id: "org.ghostream.railway.final.v7",
+    name: "🚀 GHOSTREAM (RESTORED)",
+    description: "Stable magnet streams",
+    version: "70.0.0",
     resources: ["stream"],
     types: ["movie", "series"],
     idPrefixes: ["tt"],
@@ -33,10 +33,7 @@ builder.defineStreamHandler(async (args) => {
 
         const filtered = streams.filter(s => {
             const t = (s.title || "").toLowerCase();
-            return s.infoHash &&
-                s.infoHash.length === 40 &&
-                !t.includes("2160p") &&
-                (t.includes("1080p") || t.includes("720p"));
+            return !t.includes("2160p");
         });
 
         const sorted = filtered.sort((a, b) => {
@@ -46,12 +43,23 @@ builder.defineStreamHandler(async (args) => {
             return 0;
         });
 
-        const proxied = sorted.slice(0, 10).map(s => ({
-            name: "🚀 GHOSTREAM",
-            title: s.title,
-            url: `magnet:?xt=urn:btih:${s.infoHash}`,
-            behaviorHints: { notWebReady: true }
-        }));
+        const proxied = sorted.slice(0, 10).map(s => {
+            let infoHash = s.infoHash;
+
+            if (!infoHash && s.url) {
+                const match = s.url.match(/btih:([a-fA-F0-9]{40})/);
+                if (match) infoHash = match[1];
+            }
+
+            if (!infoHash) return null;
+
+            return {
+                name: "🚀 GHOSTREAM",
+                title: s.title,
+                url: `magnet:?xt=urn:btih:${infoHash}`,
+                behaviorHints: { notWebReady: true }
+            };
+        }).filter(Boolean);
 
         return { streams: proxied };
     } catch (e) {
