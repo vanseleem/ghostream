@@ -13,10 +13,10 @@ app.use((req, res, next) => {
 });
 
 const manifest = {
-    id: "org.ghostream.railway.final.v7",
-    name: "🚀 GHOSTREAM (RESTORED)",
-    description: "Stable magnet streams",
-    version: "70.0.0",
+    id: "org.ghostream.railway.final.v8",
+    name: "🚀 GHOSTREAM (DIRECT)",
+    description: "Direct Torrentio passthrough",
+    version: "80.0.0",
     resources: ["stream"],
     types: ["movie", "series"],
     idPrefixes: ["tt"],
@@ -36,32 +36,7 @@ builder.defineStreamHandler(async (args) => {
             return !t.includes("2160p");
         });
 
-        const sorted = filtered.sort((a, b) => {
-            const a720 = (a.title || "").includes("720p");
-            const b720 = (b.title || "").includes("720p");
-            if (a720 !== b720) return a720 ? -1 : 1;
-            return 0;
-        });
-
-        const proxied = sorted.slice(0, 10).map(s => {
-            let infoHash = s.infoHash;
-
-            if (!infoHash && s.url) {
-                const match = s.url.match(/btih:([a-fA-F0-9]{40})/);
-                if (match) infoHash = match[1];
-            }
-
-            if (!infoHash) return null;
-
-            return {
-                name: "🚀 GHOSTREAM",
-                title: s.title,
-                url: `magnet:?xt=urn:btih:${infoHash}`,
-                behaviorHints: { notWebReady: true }
-            };
-        }).filter(Boolean);
-
-        return { streams: proxied };
+        return { streams: filtered.slice(0, 10) };
     } catch (e) {
         console.error(e);
         return { streams: [] };
