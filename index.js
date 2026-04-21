@@ -14,24 +14,13 @@ app.use((req, res, next) => {
 
 const UPSTREAM_URLS = [
   'https://torrentio.strem.fun',
-  'https://torrentio.stremio.my.id'
+  'https://torrentio.stremio.my.id',
+  'https://stremio-rutor-proxy.onrender.com'
 ];
 
-const MIN_SEEDERS = 3;
+const MIN_SEEDERS = 5;
 const ALLOWED_QUALITIES = ['720p', '1080p'];
-
-const SOURCE_PRIORITY = [
-  { source: 'yts', quality: '1080p' },
-  { source: 'yts', quality: '720p' },
-  { source: 'thepiratebay', quality: '1080p' },
-  { source: 'tpb', quality: '1080p' },
-  { source: 'thepiratebay', quality: '720p' },
-  { source: 'tpb', quality: '720p' },
-  { source: '1337x', quality: '1080p' },
-  { source: '1337x', quality: '720p' },
-  { source: 'rutor', quality: '1080p' },
-  { source: 'rutor', quality: '720p' }
-];
+const REQUIRED_SOURCES = ['yts', '1337x', 'eztv', 'rutor'];
 
 function getQuality(title = '') {
   const lower = title.toLowerCase();
@@ -46,33 +35,17 @@ function getSeeders(stream) {
   return match ? parseInt(match[1], 10) : 0;
 }
 
-function detectSource(title = '') {
+function hasRequiredSource(title = '') {
   const lower = title.toLowerCase();
-  if (lower.includes('yts')) return 'yts';
-  if (lower.includes('1337x')) return '1337x';
-  if (lower.includes('eztv')) return 'eztv';
-  if (lower.includes('rutor')) return 'rutor';
-  if (lower.includes('thepiratebay') || lower.includes('tpb')) return 'thepiratebay';
-  return 'other';
-}
-
-function getPriorityScore(stream) {
-  const title = stream.title || '';
-  const source = detectSource(title);
-  const quality = getQuality(title);
-  if (!quality) return 999;
-  const index = SOURCE_PRIORITY.findIndex(p => 
-    p.source === source && p.quality === quality
-  );
-  return index >= 0 ? index : 500;
+  return REQUIRED_SOURCES.some(src => lower.includes(src));
 }
 
 function filterStream(stream) {
   const title = stream.title || '';
   if (!stream.url && !stream.infoHash) return false;
-  const quality = getQuality(title);
-  if (!ALLOWED_QUALITIES.includes(quality)) return false;
+  if (!ALLOWED_QUALITIES.includes(getQuality(title))) return false;
   if (getSeeders(stream) < MIN_SEEDERS) return false;
+  if (!hasRequiredSource(title)) return false;
   return true;
 }
 
@@ -92,30 +65,12 @@ async function fetchUpstream(type, id) {
   return [];
 }
 
-function sortStreams(streams) {
-  const filtered = streams.filter(filterStream);
-  
-  filtered.sort((a, b) => {
-    const scoreA = getPriorityScore(a);
-    const scoreB = getPriorityScore(b);
-    if (scoreA !== scoreB) return scoreA - scoreB;
-    
-    const seedsA = getSeeders(a);
-    const seedsB = getSeeders(b);
-    if (seedsA !== seedsB) return seedsB - seedsA;
-    
-    return 0;
-  });
-  
-  return filtered;
-}
-
 app.get('/manifest.json', (req, res) => {
   res.json({
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
-    description: 'YTS→TPB→1337x→Rutor • 720p/1080p • ≥3 seeds',
-    version: '3.8.1',
+    description: '720p/1080p only – YTS, 1337x, EZTV, Rutor',
+    version: '3.7.0',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
@@ -127,8 +82,8 @@ app.get('/stream/:type/:id.json', async (req, res) => {
   const { type, id } = req.params;
   try {
     const streams = await fetchUpstream(type, id);
-    const sorted = sortStreams(streams);
-    res.json({ streams: sorted });
+    const filtered = streams.filter(filterStream);
+    res.json({ streams: filtered });
   } catch (e) {
     res.json({ streams: [] });
   }
