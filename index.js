@@ -1,89 +1,134 @@
-import pkg from 'stremio-addon-sdk';
-const { addonBuilder } = pkg;
-import express from 'express';
-import fetch from 'node-fetch';
+const express = require('express');
+const fetch = require('node-fetch');
 
 const app = express();
+const PORT = process.env.PORT || 7000;
 
-const manifest = {
-    id: "org.ghostream.platinum",
-    name: "Ghostream Platinum \uD83D\uDE80",
-    description: "High-speed 720p/1080p Filter (YTS, 1337x, TPB)",
-    version: "3.5.0",
-    resources: ["stream"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
+// ========== CONFIGURATION ==========
+const UPSTREAM_URL = 'https://torrentio.strem.fun';   // Public Torrentio instance
+const MIN_SEEDERS = 10;
+const ALLOWED_QUALITIES = ['720p', '1080p'];
+const PREFERRED_SOURCES = ['yts', '1337x', 'thepiratebay', 'tpb'];
+
+// ========== HELPER FUNCTIONS ==========
+function getQuality(title = '') {
+  const lower = title.toLowerCase();
+  if (lower.includes('1080p')) return '1080p';
+  if (lower.includes('720p')) return '720p';
+  return null;
+}
+
+function getSeeders(stream) {
+  // Torrentio provides seeders in behaviorHints
+  if (stream.behaviorHints?.seeders) return stream.behaviorHints.seeders;
+  // Fallback: parse from title like "👤 150"
+  const match = stream.title?.match(/👤\s*(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function isPreferredSource(title = '') {
+  const lower = title.toLowerCase();
+  return PREFERRED_SOURCES.some(src => lower.includes(src));
+}
+
+function filterStream(stream) {
+  const title = stream.title || '';
+
+  // Must have a valid link
+  if (!stream.url && !stream.infoHash) {
+    console.log(`   ❌ Filtered out: no URL/infoHash – ${title}`);
+    return false;
+  }
+
+  const quality = getQuality(title);
+  if (!ALLOWED_QUALITIES.includes(quality)) {
+    console.log(`   ❌ Filtered out: wrong quality (${quality || 'none'}) – ${title}`);
+    return false;
+  }
+
+  const seeders = getSeeders(stream);
+  if (seeders < MIN_SEEDERS) {
+    console.log(`   ❌ Filtered out: low seeds (${seeders}) – ${title}`);
+    return false;
+  }
+
+  // Optional: strict source filter – uncomment to ONLY allow preferred sources
+  // if (!isPreferredSource(title)) {
+  //   console.log(`   ❌ Filtered out: not preferred source – ${title}`);
+  //   return false;
+  // }
+
+  console.log(`   ✅ KEPT: ${quality} | ${seeders} seeds | ${title}`);
+  return true;
+}
+
+// ========== MANIFEST ==========
+app.get('/manifest.json', (req, res) => {
+  res.json({
+    id: 'org.ghostream.platinum',
+    name: 'Ghostream Platinum 🚀',
+    description: 'High-speed 720p/1080p Filter (YTS, 1337x, TPB)',
+    version: '3.5.1',  // Bump version to force Stremio refresh
+    resources: ['stream'],
+    types: ['movie', 'series'],
+    idPrefixes: ['tt'],
     catalogs: []
-};
+  });
+});
 
-const builder = new addonBuilder(manifest);
+// ========== STREAM ENDPOINT ==========
+app.get('/stream/:type/:id.json', async (req, res) => {
+  const { type, id } = req.params;
+  console.log(`\n📡 Request: ${type}/${id}`);
 
-builder.defineStreamHandler(async (args) => {
-    try {
-        const response = await fetch(`https://torrentio.strem.io/stream/${args.type}/${args.id}.json`);
-        const { streams } = await response.json();
+  try {
+    const upstreamUrl = `${UPSTREAM_URL}/stream/${type}/${id}.json`;
+    console.log(`🔗 Fetching upstream: ${upstreamUrl}`);
 
-        if (!streams || streams.length === 0) return { streams: [] };
-
-        const filtered = streams
-            .filter(s => {
-                const title = s.title.toLowerCase();
-                // 1. Quality Filter: ONLY 720p or 1080p
-                const isCorrectQuality = title.includes("720p") || title.includes("1080p");
-                
-                // 2. Source Filter: Only Platinum Sources
-                const isPlatinumSource = title.includes("yts") || 
-                                         title.includes("tpb") || 
-                                         title.includes("thepiratebay") || 
-                                         title.includes("1337x");
-                
-                return isCorrectQuality && isPlatinumSource;
-            })
-            .map(s => {
-                // Branding the labels with your Rocket
-                let sourceLabel = "TPB";
-                if (s.title.toLowerCase().includes("yts")) sourceLabel = "YTS";
-                if (s.title.toLowerCase().includes("1337x")) sourceLabel = "1337x";
-
-                return {
-                    name: `Ghostream \uD83D\uDE80`,
-                    title: `${s.title.split('\n')[0]}\n\uD83D\uDE80 [${sourceLabel}] Platinum | 🚀 Clean Link`,
-                    infoHash: s.infoHash,
-                    url: s.url
-                };
-            });
-
-        // Priority Sort: YTS first for speed
-        const sorted = filtered.sort((a, b) => a.title.includes("YTS") ? -1 : 1);
-
-        return { streams: sorted.slice(0, 15) };
-    } catch (e) {
-        console.error("Ghostream Error:", e.message);
-        return { streams: [] };
+    const response = await fetch(upstreamUrl);
+    if (!response.ok) {
+      console.error(`❌ Upstream HTTP error: ${response.status}`);
+      return res.json({ streams: [] });
     }
+
+    const data = await response.json();
+    const originalStreams = data.streams || [];
+    console.log(`📦 Upstream returned ${originalStreams.length} streams`);
+
+    // Log a few sample titles for inspection
+    if (originalStreams.length > 0) {
+      console.log('   Sample titles:');
+      originalStreams.slice(0, 3).forEach(s => console.log(`      - ${s.title}`));
+    }
+
+    const filtered = originalStreams.filter(filterStream);
+    console.log(`🎯 Filtered down to ${filtered.length} streams`);
+
+    res.json({ streams: filtered });
+  } catch (error) {
+    console.error('🔥 Proxy error:', error.message);
+    res.json({ streams: [] });
+  }
 });
 
-const addonInterface = builder.getInterface();
-
-// Routes for Stremio
-app.get("/manifest.json", (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.json(addonInterface.manifest);
+// ========== DEBUG ENDPOINT ==========
+// Visit this to see raw upstream response without filtering
+app.get('/debug/:type/:id.json', async (req, res) => {
+  const { type, id } = req.params;
+  try {
+    const upstreamUrl = `${UPSTREAM_URL}/stream/${type}/${id}.json`;
+    const response = await fetch(upstreamUrl);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.get("/stream/:type/:id.json", async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    const resp = await addonInterface.get("stream", req.params.type, req.params.id);
-    res.json(resp);
-});
+app.get('/', (req, res) => res.send('Ghostream is running. Use /manifest.json to install.'));
 
-// Root for health check
-app.get("/", (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.json(addonInterface.manifest);
-});
-
-const port = process.env.PORT || 7000;
-app.listen(port, () => {
-    console.log(`Ghostream Platinum \uD83D\uDE80 is live on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`👻 Ghostream listening on port ${PORT}`);
+  console.log(`🌐 Upstream: ${UPSTREAM_URL}`);
+  console.log(`📏 Min seeders: ${MIN_SEEDERS}`);
 });
