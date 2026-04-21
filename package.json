@@ -1,7 +1,10 @@
 {
   "name": "ghostream",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.cjs",
+  "scripts": {
+    "start": "node index.cjs"
+  },
   "dependencies": {
     "stremio-addon-sdk": "^1.6.9",
     "node-fetch": "^2.6.7"
