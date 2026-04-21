@@ -1,10 +1,10 @@
 module.exports = {
-    id: "org.ghostream.platinum",
-    version: "1.1.0",
-    name: "Ghostream Platinum",
-    description: "Exclusive 720p/1080p high-seeder index for YTS, 1337x, and Rutracker.",
-    resources: ["stream"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"],
-    catalogs: []
+  id: "org.ghostream.platinum",
+  version: "1.6.0",
+  name: "Ghostream Platinum \uD83D\uDE80",
+  description: "720p/1080p High-Seeder Indexer (YTS, EZTV, 1337x)",
+  resources: ["stream"],
+  types: ["movie", "series"],
+  idPrefixes: ["tt"],
+  catalogs: []
 };
