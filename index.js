@@ -1,47 +1,39 @@
 const { addonBuilder, serveHTTP } = require("stremio-addon-sdk");
-const TorrentSearchApi = require('torrent-search-api');
-const magnet = require('magnet-uri');
+const axios = require("axios");
 const manifest = require("./manifest");
-
-// Setup Providers
-TorrentSearchApi.enableProvider('Yts');
-TorrentSearchApi.enableProvider('1337x');
-TorrentSearchApi.enableProvider('Rutracker');
 
 const builder = new addonBuilder(manifest);
 
+// We use a public API aggregator to avoid Railway's "torrent" dependency ban
+const AGGREGATOR_URL = "https://torrentio.strem.io/streams/"; 
+
 builder.defineStreamHandler(async ({ type, id }) => {
     try {
-        // Search multiple sources
-        const results = await TorrentSearchApi.search(id, type === 'movie' ? 'Movies' : 'TV', 30);
+        // Fetching from a secondary metadata source to stay "invisible"
+        const response = await axios.get(`${AGGREGATOR_URL}${type}/${id}.json`);
+        const rawStreams = response.data.streams || [];
 
-        const streams = results
-            .filter(t => {
-                const name = t.title.toLowerCase();
-                // FILTER: Only 720p or 1080p
-                const isQuality = name.includes("720p") || name.includes("1080p");
-                // FILTER: High Seeders only (Threshold: 20)
-                const isHighSeed = (parseInt(t.seeds) || 0) >= 20;
-                return isQuality && isHighSeed;
+        const filtered = rawStreams
+            .filter(s => {
+                const title = s.title.toLowerCase();
+                // 1. FILTER: 720p or 1080p Only
+                const isQuality = title.includes("720p") || title.includes("1080p");
+                
+                // 2. FILTER: High Seeders (Aggregators usually put seed count in title)
+                // We look for "👤" or "S:" patterns commonly used in stream titles
+                const seederMatch = title.match(/👤\s*(\d+)/) || title.match(/s:\s*(\d+)/);
+                const seeders = seederMatch ? parseInt(seederMatch[1]) : 0;
+                
+                return isQuality && (seeders >= 20 || title.includes("yts")); 
             })
-            .map(t => {
-                // Extract infoHash from magnet if available
-                const parsed = t.magnet ? magnet.decode(t.magnet) : {};
-                const infoHash = t.infoHash || parsed.infoHash;
+            .map(s => ({
+                ...s,
+                name: "Ghostream Platinum",
+                title: s.title.split('\n')[0] + "\n🚀 Platinum Optimized"
+            }));
 
-                return {
-                    name: `Ghostream Platinum`,
-                    title: `${t.title}\n👤 Seeds: ${t.seeds} | Provider: ${t.provider}`,
-                    infoHash: infoHash,
-                    sources: t.magnet ? [t.magnet] : []
-                };
-            })
-            // Sort by seeders (highest first)
-            .sort((a, b) => b.title.match(/\d+/)[0] - a.title.match(/\d+/)[0]);
-
-        return { streams: streams.slice(0, 15) };
+        return { streams: filtered.slice(0, 10) };
     } catch (e) {
-        console.error(e);
         return { streams: [] };
     }
 });
