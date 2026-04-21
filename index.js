@@ -1,69 +1,49 @@
-import { addonBuilder } from "stremio-addon-sdk";
-import express from "express";
-import fetch from "node-fetch";
+const { addonBuilder, serveHTTP } = require("stremio-addon-sdk");
+const TorrentSearchApi = require('torrent-search-api');
+const magnet = require('magnet-uri');
+const manifest = require("./manifest");
 
-const app = express();
-
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "*");
-    if (req.method === "OPTIONS") return res.sendStatus(200);
-    next();
-});
-
-const manifest = {
-    id: "org.ghostream.clean",
-    version: "1.0.0",
-    name: "Ghostream Clean",
-    description: "Fast 720p/1080p streams",
-    resources: ["stream"],
-    types: ["movie", "series"],
-    idPrefixes: ["tt"]
-};
+// Setup Providers
+TorrentSearchApi.enableProvider('Yts');
+TorrentSearchApi.enableProvider('1337x');
+TorrentSearchApi.enableProvider('Rutracker');
 
 const builder = new addonBuilder(manifest);
 
 builder.defineStreamHandler(async ({ type, id }) => {
     try {
-        const url = `https://torrentio.strem.fun/sort=seeders/stream/${type}/${id}.json`;
-        const res = await fetch(url);
-        const data = await res.json();
+        // Search multiple sources
+        const results = await TorrentSearchApi.search(id, type === 'movie' ? 'Movies' : 'TV', 30);
 
-        let streams = data.streams || [];
-
-        streams = streams
-            .filter(s => {
-                const name = (s.title || "").toLowerCase();
-                if (name.includes("2160") || name.includes("4k")) return false;
-                if (!name.includes("720") && !name.includes("1080")) return false;
-                return true;
+        const streams = results
+            .filter(t => {
+                const name = t.title.toLowerCase();
+                // FILTER: Only 720p or 1080p
+                const isQuality = name.includes("720p") || name.includes("1080p");
+                // FILTER: High Seeders only (Threshold: 20)
+                const isHighSeed = (parseInt(t.seeds) || 0) >= 20;
+                return isQuality && isHighSeed;
             })
-            .slice(0, 15);
+            .map(t => {
+                // Extract infoHash from magnet if available
+                const parsed = t.magnet ? magnet.decode(t.magnet) : {};
+                const infoHash = t.infoHash || parsed.infoHash;
 
-        return { streams };
-    } catch {
+                return {
+                    name: `Ghostream Platinum`,
+                    title: `${t.title}\n👤 Seeds: ${t.seeds} | Provider: ${t.provider}`,
+                    infoHash: infoHash,
+                    sources: t.magnet ? [t.magnet] : []
+                };
+            })
+            // Sort by seeders (highest first)
+            .sort((a, b) => b.title.match(/\d+/)[0] - a.title.match(/\d+/)[0]);
+
+        return { streams: streams.slice(0, 15) };
+    } catch (e) {
+        console.error(e);
         return { streams: [] };
     }
 });
 
-const addonInterface = builder.getInterface();
-
-app.get("/manifest.json", (req, res) => {
-    res.json(addonInterface.manifest);
-});
-
-app.get("/stream/:type/:id.json", async (req, res) => {
-    try {
-        const data = await addonInterface.get("stream", req.params.type, req.params.id);
-        res.json(data);
-    } catch {
-        res.json({ streams: [] });
-    }
-});
-
-app.get("/", (req, res) => {
-    res.send("Ghostream running");
-});
-
-const PORT = process.env.PORT || 8080;
-app.listen(PORT);
+serveHTTP(builder.getInterface(), { port: process.env.PORT || 7000 });
