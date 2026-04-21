@@ -1,13 +1,14 @@
 {
-  "name": "ghostream-yts-1337x",
-  "version": "33.0.0",
-  "type": "module",
+  "name": "ghostream-platinum",
+  "version": "1.1.0",
+  "description": "Ghostream Platinum: High-speed 720p/1080p Indexer",
+  "main": "index.js",
+  "dependencies": {
+    "stremio-addon-sdk": "^1.6.0",
+    "torrent-search-api": "^2.1.4",
+    "magnet-uri": "^11.0.1"
+  },
   "scripts": {
     "start": "node index.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "stremio-addon-sdk": "^1.6.10",
-    "node-fetch": "^3.3.1"
   }
 }
