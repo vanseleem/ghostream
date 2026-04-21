@@ -20,7 +20,7 @@ const UPSTREAM_URLS = [
 
 const MIN_SEEDERS = 5;
 const ALLOWED_QUALITIES = ['720p', '1080p'];
-const REQUIRED_SOURCES = ['yts', 'thepiratebay', 'tpb', 'torrentgalaxy', '1337x', 'eztv', 'rutor'];
+const REQUIRED_SOURCES = ['yts', 'thepiratebay', '1337x', 'tpb', 'eztv', 'rutor'];
 
 function getQuality(title = '') {
   const lower = title.toLowerCase();
@@ -70,7 +70,7 @@ app.get('/manifest.json', (req, res) => {
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
     description: 'Exclusive By Van',
-    version: '5.0',
+    version: '3.7.0',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
