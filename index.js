@@ -14,16 +14,11 @@ app.use((req, res, next) => {
 
 const UPSTREAM_URLS = [
   'https://torrentio.strem.fun',
+  'https://torrentio.stremio.my.id'
 ];
 
-const MIN_SEEDERS = 1;
-
-const QUALITY_KEYWORDS = [
-  '480p', '540p', '576p', '720p', '1080p',
-  'web', 'webdl', 'webrip', 'bluray', 'hdtv', 'hdrip'
-];
-
-const FORBIDDEN_TERMS = ['cam', 'ts', 'hdts', 'tc', 'screener', 'hdcam', 'hd-ts', '2160p', '4k', 'uhd'];
+const MIN_SEEDERS = 3;
+const ALLOWED_QUALITIES = ['480p', '576p', '720p', '1080p'];
 
 const SOURCE_CONFIG = [
   { name: 'yts', display: 'YTS', order: 1 },
@@ -40,34 +35,13 @@ const SOURCE_CONFIG = [
 
 const LINKS_PER_QUALITY = 2;
 
-function isAllowedQuality(title = '') {
-  const lower = title.toLowerCase();
-  for (const term of FORBIDDEN_TERMS) {
-    if (lower.includes(term)) return false;
-  }
-  for (const q of QUALITY_KEYWORDS) {
-    if (lower.includes(q)) return true;
-  }
-  return false;
-}
-
 function getQuality(title = '') {
   const lower = title.toLowerCase();
-  if (lower.includes('720p')) return '720p';
   if (lower.includes('1080p')) return '1080p';
+  if (lower.includes('720p')) return '720p';
   if (lower.includes('480p')) return '480p';
-  if (lower.includes('540p')) return '540p';
   if (lower.includes('576p')) return '576p';
-  // No 2160p / 4K detection
-  const resMatch = lower.match(/(\d{3,4})x(\d{3,4})/);
-  if (resMatch) {
-    const height = parseInt(resMatch[2], 10);
-    if (height >= 1080) return '1080p';
-    if (height >= 720) return '720p';
-    if (height >= 540) return '540p';
-    if (height >= 480) return '480p';
-  }
-  return 'other';
+  return null;
 }
 
 function getSeeders(stream) {
@@ -81,7 +55,7 @@ function detectSource(title = '') {
   for (const src of SOURCE_CONFIG) {
     if (lower.includes(src.name)) return src.name;
   }
-  return 'other';
+  return null;
 }
 
 function getSourceOrder(sourceName) {
@@ -92,10 +66,10 @@ function getSourceOrder(sourceName) {
 function filterStream(stream) {
   const title = stream.title || '';
   if (!stream.url && !stream.infoHash) return false;
-  if (!isAllowedQuality(title)) return false;
+  const quality = getQuality(title);
+  if (!ALLOWED_QUALITIES.includes(quality)) return false;
   if (getSeeders(stream) < MIN_SEEDERS) return false;
-  const source = detectSource(title);
-  if (source === 'other') return false;
+  if (!detectSource(title)) return false;
   return true;
 }
 
@@ -144,16 +118,9 @@ function categorizeAndLimit(streams) {
     
     const qualityA = getQuality(a.title);
     const qualityB = getQuality(b.title);
-    const qualityRank = {
-      '720p': 1,
-      '1080p': 2,
-      '480p': 3,
-      '540p': 4,
-      '576p': 5,
-      'other': 999
-    };
-    const rankA = qualityRank[qualityA] || 999;
-    const rankB = qualityRank[qualityB] || 999;
+    const rankMap = { '720p': 1, '1080p': 2, '480p': 3, '576p': 4 };
+    const rankA = rankMap[qualityA] || 999;
+    const rankB = rankMap[qualityB] || 999;
     if (rankA !== rankB) return rankA - rankB;
     
     return getSeeders(b) - getSeeders(a);
@@ -165,7 +132,7 @@ app.get('/manifest.json', (req, res) => {
     id: 'org.ghostream.platinum',
     name: 'Ghostream Platinum 🚀',
     description: 'Made With 🧡 By VAN',
-    version: '5.1.0',
+    version: '5.1.2',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
